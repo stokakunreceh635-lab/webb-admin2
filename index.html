@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - TokoKu</title>
+    <title>Admin Panel - TokoKu (Cloud)</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
         body { font-family:'Inter',sans-serif; background:linear-gradient(135deg,#f5f7fe 0%,#e9eef5 100%); min-height:100vh; }
@@ -18,9 +21,6 @@
         .admin-panel { display:none; }
         .navbar { background:rgba(255,255,255,0.9); backdrop-filter:blur(12px); padding:0.8rem 2rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; }
         .logo { font-size:1.4rem; font-weight:700; background:linear-gradient(135deg,#2563eb,#7c3aed); -webkit-background-clip:text; background-clip:text; color:transparent; }
-        .nav-actions { display:flex; gap:10px; align-items:center; }
-        .btn-backup { background:#10b981; border:none; padding:0.4rem 0.8rem; border-radius:40px; color:white; cursor:pointer; font-size:0.75rem; display:inline-flex; align-items:center; gap:5px; }
-        .btn-restore { background:#f59e0b; border:none; padding:0.4rem 0.8rem; border-radius:40px; color:white; cursor:pointer; font-size:0.75rem; display:inline-flex; align-items:center; gap:5px; }
         .logout-btn { background:#ef4444; border:none; padding:0.4rem 0.8rem; border-radius:40px; color:white; cursor:pointer; font-size:0.75rem; display:inline-flex; align-items:center; gap:5px; }
         .container { max-width:1400px; margin:1.5rem auto; padding:0 1.5rem; }
         .tabs { display:flex; gap:0.8rem; margin-bottom:1.5rem; flex-wrap:wrap; justify-content:center; background:rgba(255,255,255,0.6); padding:0.4rem; border-radius:50px; }
@@ -54,7 +54,6 @@
         .chat-input input { flex:1; padding:0.5rem; border-radius:30px; border:1px solid #cbd5e1; font-size:0.8rem; }
         .badge { background:#ef4444; color:white; border-radius:50px; padding:2px 5px; font-size:0.65rem; }
         .toast { position:fixed; bottom:20px; right:20px; background:#1e293b; color:white; padding:8px 16px; border-radius:40px; font-size:0.8rem; z-index:1000; }
-        #restoreFileInput { display:none; }
         @media (max-width:768px) { .container { padding:0 1rem; } .tab-btn { padding:0.4rem 0.8rem; } }
     </style>
 </head>
@@ -72,13 +71,8 @@
 
     <div id="adminPanel" class="admin-panel">
         <div class="navbar">
-            <div class="logo"><i class="fas fa-store"></i> AdminPanel</div>
-            <div class="nav-actions">
-                <button class="btn-backup" onclick="exportData()"><i class="fas fa-download"></i> Backup Data</button>
-                <button class="btn-restore" onclick="document.getElementById('restoreFileInput').click()"><i class="fas fa-upload"></i> Restore Data</button>
-                <button class="logout-btn" onclick="adminLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
-            </div>
-            <input type="file" id="restoreFileInput" accept=".json" style="display:none" onchange="importData(this)">
+            <div class="logo"><i class="fas fa-store"></i> AdminPanel (Cloud)</div>
+            <button class="logout-btn" onclick="adminLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
         </div>
         <div class="container">
             <div class="tabs">
@@ -139,18 +133,29 @@
     </div>
 
     <script>
-        // Inisialisasi storage
-        function initStorage() {
-            if (!localStorage.getItem('products')) localStorage.setItem('products', JSON.stringify([]));
-            if (!localStorage.getItem('banners')) localStorage.setItem('banners', JSON.stringify([]));
-            if (!localStorage.getItem('orders')) localStorage.setItem('orders', JSON.stringify([]));
-            if (!localStorage.getItem('users')) localStorage.setItem('users', JSON.stringify([]));
-            if (!localStorage.getItem('chatRooms')) localStorage.setItem('chatRooms', JSON.stringify([]));
-            if (!localStorage.getItem('messages')) localStorage.setItem('messages', JSON.stringify([]));
-        }
-        initStorage();
+        // ==================== KONFIGURASI FIREBASE ====================
+        // GANTI DENGAN DATA DARI PROJECT FIREBASE ANDA!
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Collections
+        const productsRef = db.collection('products');
+        const bannersRef = db.collection('banners');
+        const ordersRef = db.collection('orders');
+        const usersRef = db.collection('users');
+        const chatRoomsRef = db.collection('chatRooms');
+        const messagesRef = db.collection('messages');
 
         let currentRoomId = null;
+        let unsubscribeMessages = null;
 
         function showToast(msg, isError = false) {
             const toast = document.createElement('div');
@@ -161,52 +166,7 @@
             setTimeout(() => toast.remove(), 3000);
         }
 
-        // ========== BACKUP & RESTORE ==========
-        function exportData() {
-            const data = {
-                products: localStorage.getItem('products'),
-                banners: localStorage.getItem('banners'),
-                orders: localStorage.getItem('orders'),
-                users: localStorage.getItem('users'),
-                chatRooms: localStorage.getItem('chatRooms'),
-                messages: localStorage.getItem('messages'),
-                version: '1.0',
-                exportDate: new Date().toISOString()
-            };
-            const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `tokoku_backup_${new Date().toISOString().slice(0,19)}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-            showToast('Data berhasil diekspor!');
-        }
-
-        function importData(input) {
-            const file = input.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    if (data.products) localStorage.setItem('products', data.products);
-                    if (data.banners) localStorage.setItem('banners', data.banners);
-                    if (data.orders) localStorage.setItem('orders', data.orders);
-                    if (data.users) localStorage.setItem('users', data.users);
-                    if (data.chatRooms) localStorage.setItem('chatRooms', data.chatRooms);
-                    if (data.messages) localStorage.setItem('messages', data.messages);
-                    showToast('Restore berhasil! Halaman akan dimuat ulang.');
-                    setTimeout(() => location.reload(), 1500);
-                } catch(err) {
-                    showToast('File tidak valid', true);
-                }
-            };
-            reader.readAsText(file);
-            input.value = '';
-        }
-
-        // ========== ADMIN LOGIN ==========
+        // ADMIN LOGIN (password admin1)
         function adminLogin() {
             const pwd = document.getElementById('adminPassword').value;
             if (pwd !== 'admin1') {
@@ -230,16 +190,190 @@
             initAdminApp();
         }
 
-        function initAdminApp() {
-            loadProducts(); loadBanners(); loadOrders(); loadChatRooms();
-            window.addEventListener('storage', (e) => {
-                if (e.key === 'orders') loadOrders();
-                if (e.key === 'messages' || e.key === 'chatRooms') { loadChatRooms(); if (currentRoomId) loadMessages(currentRoomId); }
-                if (e.key === 'products') loadProducts();
-                if (e.key === 'banners') loadBanners();
-            });
+        // ========== FUNGSI CRUD ==========
+        async function loadProducts() {
+            const snapshot = await productsRef.orderBy('createdAt', 'desc').get();
+            const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            document.getElementById('productList').innerHTML = products.map(p => `
+                <div class="product-card">
+                    <img src="${p.imageUrl}">
+                    <div class="product-info">
+                        <h4 style="font-size:0.95rem;">${p.name}</h4>
+                        <p style="font-size:0.75rem;">${p.description.substring(0,50)}</p>
+                        <strong>${p.type}</strong> | Rp${p.price.toLocaleString()}
+                    </div>
+                    <button class="delete-btn" onclick="deleteProduct('${p.id}')"><i class="fas fa-trash"></i> Hapus</button>
+                </div>
+            `).join('');
+        }
 
-            document.getElementById('productForm').addEventListener('submit', (e) => {
+        async function deleteProduct(id) {
+            await productsRef.doc(id).delete();
+            showToast('Produk dihapus');
+            loadProducts();
+        }
+
+        async function loadBanners() {
+            const snapshot = await bannersRef.orderBy('createdAt', 'desc').get();
+            const banners = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            document.getElementById('bannerList').innerHTML = banners.map(b => `
+                <div class="banner-card" style="position:relative;">
+                    <img src="${b.imageUrl}" style="width:100%; height:120px; object-fit:cover;">
+                    <button class="delete-btn" onclick="deleteBanner('${b.id}')"><i class="fas fa-trash"></i> Hapus</button>
+                </div>
+            `).join('');
+        }
+
+        async function deleteBanner(id) {
+            await bannersRef.doc(id).delete();
+            showToast('Banner dihapus');
+            loadBanners();
+        }
+
+        async function loadOrders() {
+            const ordersSnapshot = await ordersRef.get();
+            const productsSnapshot = await productsRef.get();
+            const usersSnapshot = await usersRef.get();
+            const products = productsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            const users = usersSnapshot.docs.map(u => ({ id: u.id, ...u.data() }));
+            const orders = ordersSnapshot.docs.map(o => ({ id: o.id, ...o.data() }));
+            const enriched = orders.map(o => ({
+                ...o,
+                product: products.find(p => p.id == o.productId),
+                buyer: users.find(u => u.id == o.buyerId) || { name: 'Pembeli', id: o.buyerId }
+            }));
+            const pending = enriched.filter(o => o.status === 'pending');
+            const completed = enriched.filter(o => o.status === 'completed');
+            document.getElementById('pendingOrders').innerHTML = pending.map(order => `
+                <div class="order-card" style="padding:0.8rem;">
+                    <p><strong>${order.product?.name}</strong> (x${order.quantity})</p>
+                    <p>${order.buyer?.name} - Rp${order.totalPrice.toLocaleString()}</p>
+                    <p>Alamat: ${order.address}</p>
+                    <div style="display:flex; gap:6px; margin-top:6px;">
+                        <button class="btn-success" onclick="completeOrder('${order.id}')"><i class="fas fa-check"></i> Selesai</button>
+                        <button class="btn-chat" onclick="startChatWithBuyer('${order.buyerId}', '${order.buyer?.name}')"><i class="fas fa-comment"></i> Chat</button>
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('completedOrders').innerHTML = completed.map(order => `<div class="order-card" style="padding:0.8rem; background:#f0fdf4;"><i class="fas fa-check-circle"></i> Pesanan #${order.id} - ${order.product?.name} Selesai</div>`).join('');
+        }
+
+        async function completeOrder(orderId) {
+            await ordersRef.doc(orderId).update({ status: 'completed' });
+            showToast('Pesanan selesai');
+            loadOrders();
+        }
+
+        // CHAT
+        async function loadChatRooms() {
+            const snapshot = await chatRoomsRef.get();
+            const rooms = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const messagesSnapshot = await messagesRef.get();
+            const messages = messagesSnapshot.docs.map(m => ({ id: m.id, ...m.data() }));
+            const roomsDiv = document.getElementById('roomsList');
+            if (!roomsDiv) return;
+            roomsDiv.innerHTML = rooms.map(room => {
+                const unread = messages.filter(m => m.roomId == room.id && m.senderId !== 'admin' && !m.read).length;
+                return `<div class="room-item" data-roomid="${room.id}"><i class="fas fa-user-circle"></i> ${room.buyerName} ${unread ? `<span class="badge">${unread}</span>` : ''}</div>`;
+            }).join('');
+            document.querySelectorAll('.room-item').forEach(el => {
+                el.addEventListener('click', () => {
+                    currentRoomId = el.dataset.roomid;
+                    document.querySelectorAll('.room-item').forEach(r => r.classList.remove('active'));
+                    el.classList.add('active');
+                    markMessagesAsRead(currentRoomId);
+                    loadMessages(currentRoomId);
+                });
+            });
+        }
+
+        async function markMessagesAsRead(roomId) {
+            const snapshot = await messagesRef.where('roomId', '==', roomId).where('senderId', '!=', 'admin').where('read', '==', false).get();
+            snapshot.forEach(async doc => {
+                await messagesRef.doc(doc.id).update({ read: true });
+            });
+        }
+
+        async function loadMessages(roomId) {
+            if (unsubscribeMessages) unsubscribeMessages();
+            const q = messagesRef.where('roomId', '==', roomId).orderBy('timestamp', 'asc');
+            unsubscribeMessages = q.onSnapshot(snapshot => {
+                const container = document.getElementById('chatMessages');
+                container.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const msg = doc.data();
+                    const isAdmin = msg.senderId === 'admin';
+                    const div = document.createElement('div');
+                    div.className = `message ${isAdmin ? 'admin' : 'buyer'}`;
+                    let content = '';
+                    if (msg.content) content += `<i class="fas ${isAdmin ? 'fa-user-shield' : 'fa-user'}"></i> ${msg.content}`;
+                    if (msg.fileUrl) content += `<br><a href="${msg.fileUrl}" target="_blank">📎 File</a>`;
+                    div.innerHTML = content;
+                    container.appendChild(div);
+                });
+                container.scrollTop = container.scrollHeight;
+            });
+        }
+
+        async function startChatWithBuyer(buyerId, buyerName) {
+            let roomId = null;
+            const snapshot = await chatRoomsRef.where('buyerId', '==', buyerId).where('adminId', '==', 'admin').get();
+            if (!snapshot.empty) {
+                roomId = snapshot.docs[0].id;
+            } else {
+                const newRoom = { buyerId, adminId: 'admin', buyerName, createdAt: Date.now() };
+                const docRef = await chatRoomsRef.add(newRoom);
+                roomId = docRef.id;
+            }
+            currentRoomId = roomId;
+            loadChatRooms();
+            loadMessages(currentRoomId);
+            document.querySelector('[data-tab="chat"]').click();
+            setTimeout(() => {
+                const active = document.querySelector(`.room-item[data-roomid="${currentRoomId}"]`);
+                if(active) active.classList.add('active');
+            }, 200);
+        }
+
+        async function sendMessage() {
+            if (!currentRoomId) return showToast('Pilih ruang chat', true);
+            const msgInput = document.getElementById('messageInput');
+            const text = msgInput.value.trim();
+            const fileInput = document.getElementById('chatFile');
+            let fileUrl = null;
+            if (fileInput.files.length) {
+                const file = fileInput.files[0];
+                fileUrl = await new Promise(resolve => { const r = new FileReader(); r.onload = e => resolve(e.target.result); r.readAsDataURL(file); });
+            }
+            if (!text && !fileUrl) return;
+            await messagesRef.add({
+                roomId: currentRoomId,
+                senderId: 'admin',
+                senderName: 'Admin',
+                content: text,
+                fileUrl,
+                timestamp: Date.now(),
+                read: false
+            });
+            msgInput.value = '';
+            fileInput.value = '';
+            document.getElementById('filePreview').innerHTML = '';
+        }
+
+        // Inisialisasi Admin App
+        function initAdminApp() {
+            loadProducts();
+            loadBanners();
+            loadOrders();
+            loadChatRooms();
+
+            // Real-time listener untuk orders
+            ordersRef.onSnapshot(() => loadOrders());
+            productsRef.onSnapshot(() => loadProducts());
+            bannersRef.onSnapshot(() => loadBanners());
+            chatRoomsRef.onSnapshot(() => loadChatRooms());
+
+            document.getElementById('productForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const name = document.getElementById('prodName').value;
                 const desc = document.getElementById('prodDesc').value;
@@ -248,54 +382,32 @@
                 const file = document.getElementById('prodImage').files[0];
                 if (!file) return showToast('Pilih foto', true);
                 const reader = new FileReader();
-                reader.onload = (ev) => {
-                    const products = JSON.parse(localStorage.getItem('products'));
-                    products.push({ id: Date.now(), name, description: desc, type, price, imageUrl: ev.target.result });
-                    localStorage.setItem('products', JSON.stringify(products));
+                reader.onload = async (ev) => {
+                    await productsRef.add({
+                        name, description: desc, type, price,
+                        imageUrl: ev.target.result,
+                        createdAt: Date.now()
+                    });
                     showToast('Produk ditambahkan');
-                    loadProducts();
-                    e.target.reset();
+                    document.getElementById('productForm').reset();
                 };
                 reader.readAsDataURL(file);
             });
 
-            document.getElementById('bannerForm').addEventListener('submit', (e) => {
+            document.getElementById('bannerForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const file = document.getElementById('bannerImage').files[0];
                 if (!file) return showToast('Pilih banner', true);
                 const reader = new FileReader();
-                reader.onload = (ev) => {
-                    const banners = JSON.parse(localStorage.getItem('banners'));
-                    banners.push({ id: Date.now(), imageUrl: ev.target.result });
-                    localStorage.setItem('banners', JSON.stringify(banners));
+                reader.onload = async (ev) => {
+                    await bannersRef.add({ imageUrl: ev.target.result, createdAt: Date.now() });
                     showToast('Banner terupload');
-                    loadBanners();
-                    e.target.reset();
+                    document.getElementById('bannerForm').reset();
                 };
                 reader.readAsDataURL(file);
             });
 
-            document.getElementById('sendMsgBtn').addEventListener('click', async () => {
-                if (!currentRoomId) return showToast('Pilih ruang chat', true);
-                const msgInput = document.getElementById('messageInput');
-                const text = msgInput.value.trim();
-                const fileInput = document.getElementById('chatFile');
-                let fileUrl = null;
-                if (fileInput.files.length) {
-                    const file = fileInput.files[0];
-                    fileUrl = await new Promise(resolve => { const r = new FileReader(); r.onload = e => resolve(e.target.result); r.readAsDataURL(file); });
-                }
-                if (!text && !fileUrl) return;
-                const messages = JSON.parse(localStorage.getItem('messages'));
-                messages.push({ id: Date.now(), roomId: currentRoomId, senderId: 'admin', senderName: 'Admin', content: text, fileUrl, timestamp: Date.now() });
-                localStorage.setItem('messages', JSON.stringify(messages));
-                msgInput.value = '';
-                fileInput.value = '';
-                document.getElementById('filePreview').innerHTML = '';
-                loadMessages(currentRoomId);
-                window.dispatchEvent(new StorageEvent('storage', { key: 'messages' }));
-            });
-
+            document.getElementById('sendMsgBtn').addEventListener('click', sendMessage);
             document.getElementById('chatFile').addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 document.getElementById('filePreview').innerHTML = file ? `<i class="fas fa-file"></i> ${file.name}` : '';
@@ -314,132 +426,10 @@
             });
         }
 
-        function loadProducts() {
-            const products = JSON.parse(localStorage.getItem('products'));
-            document.getElementById('productList').innerHTML = products.map(p => `
-                <div class="product-card">
-                    <img src="${p.imageUrl}">
-                    <div class="product-info">
-                        <h4 style="font-size:0.95rem;">${p.name}</h4>
-                        <p style="font-size:0.75rem;">${p.description.substring(0,50)}</p>
-                        <strong>${p.type}</strong> | Rp${p.price.toLocaleString()}
-                    </div>
-                    <button class="delete-btn" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i> Hapus</button>
-                </div>
-            `).join('');
-        }
-
-        function deleteProduct(id) {
-            let products = JSON.parse(localStorage.getItem('products'));
-            products = products.filter(p => p.id != id);
-            localStorage.setItem('products', JSON.stringify(products));
-            showToast('Produk dihapus');
-            loadProducts();
-        }
-
-        function loadBanners() {
-            const banners = JSON.parse(localStorage.getItem('banners'));
-            document.getElementById('bannerList').innerHTML = banners.map(b => `
-                <div class="banner-card" style="position:relative;">
-                    <img src="${b.imageUrl}" style="width:100%; height:120px; object-fit:cover;">
-                    <button class="delete-btn" onclick="deleteBanner(${b.id})" style="background:#ef4444;"><i class="fas fa-trash"></i> Hapus</button>
-                </div>
-            `).join('');
-        }
-
-        function deleteBanner(id) {
-            let banners = JSON.parse(localStorage.getItem('banners'));
-            banners = banners.filter(b => b.id != id);
-            localStorage.setItem('banners', JSON.stringify(banners));
-            showToast('Banner dihapus');
-            loadBanners();
-        }
-
-        function loadOrders() {
-            const orders = JSON.parse(localStorage.getItem('orders'));
-            const products = JSON.parse(localStorage.getItem('products'));
-            const users = JSON.parse(localStorage.getItem('users'));
-            const enriched = orders.map(o => ({ ...o, product: products.find(p => p.id == o.productId), buyer: users.find(u => u.id == o.buyerId) || { name: 'Pembeli', id: o.buyerId } }));
-            const pending = enriched.filter(o => o.status === 'pending');
-            const completed = enriched.filter(o => o.status === 'completed');
-            document.getElementById('pendingOrders').innerHTML = pending.map(order => `
-                <div class="order-card" style="padding:0.8rem;">
-                    <p><strong>${order.product?.name}</strong> (x${order.quantity})</p>
-                    <p>${order.buyer?.name} - Rp${order.totalPrice.toLocaleString()}</p>
-                    <p>Alamat: ${order.address}</p>
-                    <div style="display:flex; gap:6px; margin-top:6px;">
-                        <button class="btn-success" onclick="completeOrder('${order.id}')"><i class="fas fa-check"></i> Selesai</button>
-                        <button class="btn-chat" onclick="startChatWithBuyer('${order.buyerId}', '${order.buyer?.name}')"><i class="fas fa-comment"></i> Chat</button>
-                    </div>
-                </div>
-            `).join('');
-            document.getElementById('completedOrders').innerHTML = completed.map(order => `<div class="order-card" style="padding:0.8rem; background:#f0fdf4;"><i class="fas fa-check-circle"></i> Pesanan #${order.id} - ${order.product?.name} Selesai</div>`).join('');
-        }
-
-        window.completeOrder = function(orderId) {
-            let orders = JSON.parse(localStorage.getItem('orders'));
-            orders = orders.map(o => o.id == orderId ? { ...o, status: 'completed' } : o);
-            localStorage.setItem('orders', JSON.stringify(orders));
-            showToast('Pesanan selesai');
-            loadOrders();
-        };
-
+        window.completeOrder = completeOrder;
         window.deleteProduct = deleteProduct;
         window.deleteBanner = deleteBanner;
-        window.startChatWithBuyer = function(buyerId, buyerName) {
-            let chatRooms = JSON.parse(localStorage.getItem('chatRooms'));
-            let room = chatRooms.find(r => r.buyerId == buyerId && r.adminId === 'admin');
-            if (!room) {
-                room = { id: Date.now(), buyerId, adminId: 'admin', buyerName, createdAt: Date.now() };
-                chatRooms.push(room);
-                localStorage.setItem('chatRooms', JSON.stringify(chatRooms));
-            }
-            currentRoomId = room.id;
-            loadChatRooms();
-            loadMessages(currentRoomId);
-            document.querySelector('[data-tab="chat"]').click();
-            setTimeout(() => { const active = document.querySelector(`.room-item[data-roomid="${currentRoomId}"]`); if(active) active.classList.add('active'); }, 200);
-        };
-
-        function loadChatRooms() {
-            const rooms = JSON.parse(localStorage.getItem('chatRooms'));
-            const messages = JSON.parse(localStorage.getItem('messages'));
-            const roomsDiv = document.getElementById('roomsList');
-            if (!roomsDiv) return;
-            roomsDiv.innerHTML = rooms.map(room => {
-                const unread = messages.filter(m => m.roomId == room.id && m.senderId !== 'admin' && !m.read).length;
-                return `<div class="room-item" data-roomid="${room.id}"><i class="fas fa-user-circle"></i> ${room.buyerName} ${unread ? `<span class="badge">${unread}</span>` : ''}</div>`;
-            }).join('');
-            document.querySelectorAll('.room-item').forEach(el => {
-                el.addEventListener('click', () => {
-                    currentRoomId = parseInt(el.dataset.roomid);
-                    document.querySelectorAll('.room-item').forEach(r => r.classList.remove('active'));
-                    el.classList.add('active');
-                    let msgs = JSON.parse(localStorage.getItem('messages'));
-                    msgs = msgs.map(m => m.roomId == currentRoomId && m.senderId !== 'admin' ? { ...m, read: true } : m);
-                    localStorage.setItem('messages', JSON.stringify(msgs));
-                    loadMessages(currentRoomId);
-                });
-            });
-        }
-
-        function loadMessages(roomId) {
-            const messages = JSON.parse(localStorage.getItem('messages'));
-            const roomMessages = messages.filter(m => m.roomId == roomId).sort((a,b) => a.timestamp - b.timestamp);
-            const container = document.getElementById('chatMessages');
-            container.innerHTML = '';
-            roomMessages.forEach(msg => {
-                const isAdmin = msg.senderId === 'admin';
-                const div = document.createElement('div');
-                div.className = `message ${isAdmin ? 'admin' : 'buyer'}`;
-                let content = '';
-                if (msg.content) content += `<i class="fas ${isAdmin ? 'fa-user-shield' : 'fa-user'}"></i> ${msg.content}`;
-                if (msg.fileUrl) content += `<br><a href="${msg.fileUrl}" target="_blank">📎 File</a>`;
-                div.innerHTML = content;
-                container.appendChild(div);
-            });
-            container.scrollTop = container.scrollHeight;
-        }
+        window.startChatWithBuyer = startChatWithBuyer;
     </script>
 </body>
 </html>
