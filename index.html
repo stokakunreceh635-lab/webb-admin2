@@ -2,8 +2,8 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - TokoKu (Cloud)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Admin Panel - TokoKu (Database Cloud)</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -20,10 +20,7 @@
         .admin-panel { display:none; }
         .navbar { background:rgba(255,255,255,0.9); backdrop-filter:blur(12px); padding:0.8rem 2rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; }
         .logo { font-size:1.4rem; font-weight:700; background:linear-gradient(135deg,#2563eb,#7c3aed); -webkit-background-clip:text; background-clip:text; color:transparent; }
-        .status { font-size:0.7rem; padding:4px 8px; border-radius:20px; background:#e2e8f0; }
-        .status.online { background:#10b981; color:white; }
-        .status.offline { background:#ef4444; color:white; }
-        .logout-btn { background:#ef4444; border:none; padding:0.4rem 0.8rem; border-radius:40px; color:white; cursor:pointer; font-size:0.75rem; }
+        .logout-btn { background:#ef4444; border:none; padding:0.4rem 0.8rem; border-radius:40px; color:white; cursor:pointer; font-size:0.75rem; display:inline-flex; align-items:center; gap:5px; }
         .container { max-width:1400px; margin:1.5rem auto; padding:0 1.5rem; }
         .tabs { display:flex; gap:0.8rem; margin-bottom:1.5rem; flex-wrap:wrap; justify-content:center; background:rgba(255,255,255,0.6); padding:0.4rem; border-radius:50px; }
         .tab-btn { background:transparent; border:none; padding:0.5rem 1.2rem; border-radius:40px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:0.85rem; }
@@ -35,9 +32,9 @@
         label { font-weight:600; display:block; margin-bottom:0.3rem; font-size:0.85rem; }
         input, textarea { width:100%; padding:0.6rem 0.8rem; border:1px solid #e2e8f0; border-radius:16px; font-size:0.85rem; }
         .btn-primary { background:#2563eb; color:white; border:none; padding:0.5rem 1.2rem; border-radius:40px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:0.85rem; }
-        .btn-danger { background:#ef4444; color:white; border:none; padding:0.3rem 0.8rem; border-radius:40px; cursor:pointer; font-size:0.75rem; }
-        .btn-success { background:#10b981; color:white; border:none; padding:0.4rem 0.8rem; border-radius:40px; cursor:pointer; font-size:0.75rem; }
-        .btn-chat { background:#3b82f6; color:white; border:none; padding:0.4rem 0.8rem; border-radius:40px; cursor:pointer; font-size:0.75rem; }
+        .btn-danger { background:#ef4444; color:white; border:none; padding:0.3rem 0.8rem; border-radius:40px; cursor:pointer; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px; }
+        .btn-success { background:#10b981; color:white; border:none; padding:0.4rem 0.8rem; border-radius:40px; cursor:pointer; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px; }
+        .btn-chat { background:#3b82f6; color:white; border:none; padding:0.4rem 0.8rem; border-radius:40px; cursor:pointer; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px; }
         .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:1rem; margin-top:1rem; }
         .product-card, .banner-card, .order-card { background:white; border-radius:18px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.05); position:relative; }
         .product-card img { width:100%; height:150px; object-fit:cover; }
@@ -56,7 +53,6 @@
         .chat-input input { flex:1; padding:0.5rem; border-radius:30px; border:1px solid #cbd5e1; font-size:0.8rem; }
         .badge { background:#ef4444; color:white; border-radius:50px; padding:2px 5px; font-size:0.65rem; }
         .toast { position:fixed; bottom:20px; right:20px; background:#1e293b; color:white; padding:8px 16px; border-radius:40px; font-size:0.8rem; z-index:1000; }
-        .refresh-btn { background:#64748b; border:none; padding:0.3rem 0.7rem; border-radius:20px; color:white; cursor:pointer; font-size:0.7rem; margin-left:8px; }
         @media (max-width:768px) { .container { padding:0 1rem; } .tab-btn { padding:0.4rem 0.8rem; } }
     </style>
 </head>
@@ -74,11 +70,8 @@
 
     <div id="adminPanel" class="admin-panel">
         <div class="navbar">
-            <div class="logo"><i class="fas fa-store"></i> AdminPanel <span id="connectionStatus" class="status">Mengecek...</span></div>
-            <div>
-                <button class="refresh-btn" onclick="manualRefresh()"><i class="fas fa-sync-alt"></i> Refresh</button>
-                <button class="logout-btn" onclick="adminLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
-            </div>
+            <div class="logo"><i class="fas fa-store"></i> AdminPanel (Cloud DB)</div>
+            <button class="logout-btn" onclick="adminLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
         </div>
         <div class="container">
             <div class="tabs">
@@ -89,38 +82,38 @@
             </div>
             <div id="products" class="tab-content active">
                 <div class="form-card">
-                    <h3>Tambah Produk</h3>
+                    <h3 style="font-size:1.1rem;">Tambah Produk</h3>
                     <form id="productForm">
                         <div class="form-group"><label>Nama Produk</label><input type="text" id="prodName" required></div>
-                        <div class="form-group"><label>Foto</label><input type="file" id="prodImage" accept="image/*" required></div>
+                        <div class="form-group"><label>Foto (dari galeri)</label><input type="file" id="prodImage" accept="image/*" required></div>
                         <div class="form-group"><label>Deskripsi</label><textarea id="prodDesc" rows="2"></textarea></div>
                         <div class="form-group"><label>Jenis</label><input type="text" id="prodType"></div>
                         <div class="form-group"><label>Harga (Rp)</label><input type="number" id="prodPrice"></div>
                         <button type="submit" class="btn-primary"><i class="fas fa-upload"></i> Upload</button>
                     </form>
                 </div>
-                <h3>Daftar Produk <span style="font-size:12px;" id="productCount"></span></h3>
+                <h3 style="font-size:1rem;">Daftar Produk</h3>
                 <div id="productList" class="grid"></div>
             </div>
             <div id="banners" class="tab-content">
                 <div class="form-card">
-                    <h3>Upload Banner (19:6)</h3>
+                    <h3 style="font-size:1.1rem;">Upload Banner (rasio 19:6)</h3>
                     <form id="bannerForm">
                         <div class="form-group"><label>Gambar</label><input type="file" id="bannerImage" accept="image/*" required></div>
                         <button type="submit" class="btn-primary"><i class="fas fa-cloud-upload-alt"></i> Upload</button>
                     </form>
                 </div>
-                <h3>Banner Aktif</h3>
+                <h3 style="font-size:1rem;">Banner Aktif</h3>
                 <div id="bannerList" class="grid"></div>
             </div>
             <div id="orders" class="tab-content">
-                <h3>Pesanan Pending</h3>
+                <h3 style="font-size:1rem;">Pesanan Pending</h3>
                 <div id="pendingOrders" class="grid"></div>
-                <h3>Pesanan Selesai</h3>
+                <h3 style="margin-top:1.2rem; font-size:1rem;">Pesanan Selesai</h3>
                 <div id="completedOrders" class="grid"></div>
             </div>
             <div id="chat" class="tab-content">
-                <h3>Chat dengan Pembeli</h3>
+                <h3 style="font-size:1rem;">Chat dengan Pembeli</h3>
                 <div class="chat-area">
                     <div class="rooms-list" id="roomsList">Memuat...</div>
                     <div class="chat-window">
@@ -128,7 +121,7 @@
                         <div class="chat-input">
                             <input type="text" id="messageInput" placeholder="Pesan...">
                             <input type="file" id="chatFile" accept="image/*,video/*" style="display:none">
-                            <button onclick="document.getElementById('chatFile').click()" class="btn-primary" style="background:#64748b;"><i class="fas fa-paperclip"></i></button>
+                            <button onclick="document.getElementById('chatFile').click()" class="btn-primary" style="background:#64748b; padding:0.4rem 0.8rem;"><i class="fas fa-paperclip"></i></button>
                             <button id="sendMsgBtn" class="btn-primary"><i class="fas fa-paper-plane"></i> Kirim</button>
                         </div>
                         <div id="filePreview" style="font-size:10px; padding:0 0.8rem 0.5rem;"></div>
@@ -139,55 +132,29 @@
     </div>
 
     <script>
-        // ========== FIREBASE CONFIG ==========
-        // !!! GANTI DENGAN DATA FIREBASE ANDA !!!
+        // ========== KONFIGURASI FIREBASE (GANTI DENGAN DATA ANDA) ==========
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
+            apiKey: "088088",
             authDomain: "YOUR_AUTH_DOMAIN",
-            projectId: "YOUR_PROJECT_ID",
+            projectId: "TokoKu",
             storageBucket: "YOUR_STORAGE_BUCKET",
             messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            appId: "TokoKu"
         };
-        
-        let db;
-        let productsRef, bannersRef, ordersRef, usersRef, chatRoomsRef, messagesRef;
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Collections (database)
+        const productsRef = db.collection('products');
+        const bannersRef = db.collection('banners');
+        const ordersRef = db.collection('orders');
+        const usersRef = db.collection('users');
+        const chatRoomsRef = db.collection('chatRooms');
+        const messagesRef = db.collection('messages');
+
         let currentRoomId = null;
         let unsubscribeMessages = null;
-        
-        // Inisialisasi Firebase
-        function initFirebase() {
-            try {
-                firebase.initializeApp(firebaseConfig);
-                db = firebase.firestore();
-                productsRef = db.collection('products');
-                bannersRef = db.collection('banners');
-                ordersRef = db.collection('orders');
-                usersRef = db.collection('users');
-                chatRoomsRef = db.collection('chatRooms');
-                messagesRef = db.collection('messages');
-                
-                // Cek koneksi
-                db.collection('products').limit(1).get()
-                    .then(() => {
-                        document.getElementById('connectionStatus').innerText = 'Online';
-                        document.getElementById('connectionStatus').className = 'status online';
-                        showToast('Terhubung ke Firebase Cloud');
-                    })
-                    .catch(err => {
-                        document.getElementById('connectionStatus').innerText = 'Offline';
-                        document.getElementById('connectionStatus').className = 'status offline';
-                        console.error('Firebase connection error:', err);
-                        showToast('Gagal terhubung ke Firebase! Periksa config.', true);
-                    });
-            } catch(e) {
-                console.error('Firebase init error:', e);
-                alert('Error Firebase: ' + e.message + '\nPastikan konfigurasi Firebase sudah benar!');
-            }
-        }
-        
-        initFirebase();
-        
+
         function showToast(msg, isError = false) {
             const toast = document.createElement('div');
             toast.className = 'toast';
@@ -196,74 +163,53 @@
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
         }
-        
+
         // ADMIN LOGIN
         function adminLogin() {
             const pwd = document.getElementById('adminPassword').value;
             if (pwd !== 'admin1') {
-                document.getElementById('loginError').innerText = 'Password salah!';
-                return;
+                document.getElementById('loginError').innerText = 'Password salah!';                return;
             }
             localStorage.setItem('adminLoggedIn', 'true');
             document.getElementById('adminLoginContainer').style.display = 'none';
             document.getElementById('adminPanel').style.display = 'block';
             initAdminApp();
         }
-        
+
         function adminLogout() {
             localStorage.removeItem('adminLoggedIn');
             location.reload();
         }
-        
+
         if (localStorage.getItem('adminLoggedIn') === 'true') {
             document.getElementById('adminLoginContainer').style.display = 'none';
             document.getElementById('adminPanel').style.display = 'block';
             initAdminApp();
         }
-        
-        // Fungsi refresh manual
-        window.manualRefresh = function() {
-            loadProducts();
-            loadBanners();
-            loadOrders();
-            loadChatRooms();
-            showToast('Data dimuat ulang');
-        };
-        
+
+        // ========== PRODUK ==========
         async function loadProducts() {
-            try {
-                const snapshot = await productsRef.orderBy('createdAt', 'desc').get();
-                const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                document.getElementById('productCount').innerText = `(${products.length} produk)`;
-                if (products.length === 0) {
-                    document.getElementById('productList').innerHTML = '<div style="text-align:center; padding:2rem;">Belum ada produk. Silakan tambah.</div>';
-                    return;
-                }
-                document.getElementById('productList').innerHTML = products.map(p => `
-                    <div class="product-card">
-                        <img src="${p.imageUrl}">
-                        <div class="product-info">
-                            <h4>${p.name}</h4>
-                            <p>${p.description.substring(0,50)}</p>
-                            <strong>${p.type}</strong> | Rp${p.price.toLocaleString()}
-                        </div>
-                        <button class="delete-btn" onclick="deleteProduct('${p.id}')"><i class="fas fa-trash"></i> Hapus</button>
+            const snapshot = await productsRef.orderBy('createdAt', 'desc').get();
+            const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            document.getElementById('productList').innerHTML = products.map(p => `
+                <div class="product-card">
+                    <img src="${p.imageUrl}">
+                    <div class="product-info">
+                        <h4 style="font-size:0.95rem;">${p.name}</h4>
+                        <p style="font-size:0.75rem;">${p.description.substring(0,50)}</p>
+                        <strong>${p.type}</strong> | Rp${p.price.toLocaleString()}
                     </div>
-                `).join('');
-            } catch(err) {
-                console.error('Load products error:', err);
-                showToast('Gagal memuat produk: ' + err.message, true);
-            }
+                    <button class="delete-btn" onclick="deleteProduct('${p.id}')"><i class="fas fa-trash"></i> Hapus</button>
+                </div>
+            `).join('');
         }
-        
+
         async function deleteProduct(id) {
-            if(confirm('Yakin hapus produk ini?')) {
-                await productsRef.doc(id).delete();
-                showToast('Produk dihapus');
-                loadProducts();
-            }
+            await productsRef.doc(id).delete();
+            showToast('Produk dihapus');
         }
-        
+
+        // ========== BANNER ==========
         async function loadBanners() {
             const snapshot = await bannersRef.orderBy('createdAt', 'desc').get();
             const banners = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -274,15 +220,13 @@
                 </div>
             `).join('');
         }
-        
+
         async function deleteBanner(id) {
-            if(confirm('Yakin hapus banner ini?')) {
-                await bannersRef.doc(id).delete();
-                showToast('Banner dihapus');
-                loadBanners();
-            }
+            await bannersRef.doc(id).delete();
+            showToast('Banner dihapus');
         }
-        
+
+        // ========== PESANAN ==========
         async function loadOrders() {
             const ordersSnapshot = await ordersRef.get();
             const productsSnapshot = await productsRef.get();
@@ -299,7 +243,7 @@
             const completed = enriched.filter(o => o.status === 'completed');
             document.getElementById('pendingOrders').innerHTML = pending.map(order => `
                 <div class="order-card" style="padding:0.8rem;">
-                    <p><strong>${order.product?.name || 'Produk?'}</strong> (x${order.quantity})</p>
+                    <p><strong>${order.product?.name}</strong> (x${order.quantity})</p>
                     <p>${order.buyer?.name} - Rp${order.totalPrice.toLocaleString()}</p>
                     <p>Alamat: ${order.address}</p>
                     <div style="display:flex; gap:6px; margin-top:6px;">
@@ -308,16 +252,15 @@
                     </div>
                 </div>
             `).join('');
-            document.getElementById('completedOrders').innerHTML = completed.map(order => `<div class="order-card" style="padding:0.8rem; background:#f0fdf4;"><i class="fas fa-check-circle"></i> Pesanan ${order.product?.name} Selesai</div>`).join('');
+            document.getElementById('completedOrders').innerHTML = completed.map(order => `<div class="order-card" style="padding:0.8rem; background:#f0fdf4;"><i class="fas fa-check-circle"></i> Pesanan #${order.id} - ${order.product?.name} Selesai</div>`).join('');
         }
-        
+
         async function completeOrder(orderId) {
             await ordersRef.doc(orderId).update({ status: 'completed' });
             showToast('Pesanan selesai');
-            loadOrders();
         }
-        
-        // CHAT
+
+        // ========== CHAT ==========
         async function loadChatRooms() {
             const snapshot = await chatRoomsRef.get();
             const rooms = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -339,15 +282,15 @@
                 });
             });
         }
-        
+
         async function markMessagesAsRead(roomId) {
             const snapshot = await messagesRef.where('roomId', '==', roomId).where('senderId', '!=', 'admin').where('read', '==', false).get();
             snapshot.forEach(async doc => {
                 await messagesRef.doc(doc.id).update({ read: true });
             });
         }
-        
-        function loadMessages(roomId) {
+
+        async function loadMessages(roomId) {
             if (unsubscribeMessages) unsubscribeMessages();
             const q = messagesRef.where('roomId', '==', roomId).orderBy('timestamp', 'asc');
             unsubscribeMessages = q.onSnapshot(snapshot => {
@@ -367,7 +310,7 @@
                 container.scrollTop = container.scrollHeight;
             });
         }
-        
+
         async function startChatWithBuyer(buyerId, buyerName) {
             let roomId = null;
             const snapshot = await chatRoomsRef.where('buyerId', '==', buyerId).where('adminId', '==', 'admin').get();
@@ -387,7 +330,7 @@
                 if(active) active.classList.add('active');
             }, 200);
         }
-        
+
         async function sendMessage() {
             if (!currentRoomId) return showToast('Pilih ruang chat', true);
             const msgInput = document.getElementById('messageInput');
@@ -412,19 +355,15 @@
             fileInput.value = '';
             document.getElementById('filePreview').innerHTML = '';
         }
-        
+
+        // ========== INISIALISASI ==========
         function initAdminApp() {
-            loadProducts();
-            loadBanners();
-            loadOrders();
-            loadChatRooms();
-            
             // Real-time listeners
             productsRef.onSnapshot(() => loadProducts());
             bannersRef.onSnapshot(() => loadBanners());
             ordersRef.onSnapshot(() => loadOrders());
             chatRoomsRef.onSnapshot(() => loadChatRooms());
-            
+
             document.getElementById('productForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const name = document.getElementById('prodName').value;
@@ -440,12 +379,12 @@
                         imageUrl: ev.target.result,
                         createdAt: Date.now()
                     });
-                    showToast('Produk ditambahkan ke cloud!');
+                    showToast('Produk ditambahkan');
                     document.getElementById('productForm').reset();
                 };
                 reader.readAsDataURL(file);
             });
-            
+
             document.getElementById('bannerForm').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const file = document.getElementById('bannerImage').files[0];
@@ -453,18 +392,18 @@
                 const reader = new FileReader();
                 reader.onload = async (ev) => {
                     await bannersRef.add({ imageUrl: ev.target.result, createdAt: Date.now() });
-                    showToast('Banner terupload ke cloud');
+                    showToast('Banner terupload');
                     document.getElementById('bannerForm').reset();
                 };
                 reader.readAsDataURL(file);
             });
-            
+
             document.getElementById('sendMsgBtn').addEventListener('click', sendMessage);
             document.getElementById('chatFile').addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 document.getElementById('filePreview').innerHTML = file ? `<i class="fas fa-file"></i> ${file.name}` : '';
             });
-            
+
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const tabId = btn.dataset.tab;
@@ -473,11 +412,10 @@
                     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
                     if (tabId === 'chat') { loadChatRooms(); if(currentRoomId) loadMessages(currentRoomId); }
-                    if (tabId === 'orders') loadOrders();
                 });
             });
         }
-        
+
         window.completeOrder = completeOrder;
         window.deleteProduct = deleteProduct;
         window.deleteBanner = deleteBanner;
